@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+  <!--
+  /**
+   * @todo Factor in additional 1% interest, cap on Medisave contributions
+   * @link https://github.com/zionsg/cpf-calculator/
+   * @version 2019-04-01T22:20+08:00
+   */
+  -->
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>CPF Calculator</title>
+
+    <style>
+      html,
+      body,
+      input {
+        font-family: monospace;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h3>CPF Calculator</h3>
+    <form>
+      Current age: <input id="age" type="number" /><br><br>
+
+      Monthly salary: <input id="monthlySalary" type="number" /><br>
+      <input id="includeEmployeeContribution" type="checkbox" checked /> Include employee contribution<br>
+      <input id="includeEmployerContribution" type="checkbox" checked /> Include employer contribution<br>
+      <br>
+
+      Annual top-ups for each account:<br>
+      &nbsp;&nbsp;Ordinary: <input id="annualTopupOrdinary" type="number" /><br>
+      &nbsp;&nbsp;Special: <input id="annualTopupSpecial" type="number" /><br>
+      &nbsp;&nbsp;Medisave: <input id="annualTopupMedisave" type="number" /><br>
+      <br>
+
+      Current sums for each account:<br>
+      &nbsp;&nbsp;Ordinary: <input id="sumOrdinary" type="number" /><br>
+      &nbsp;&nbsp;Special: <input id="sumSpecial" type="number" /><br>
+      &nbsp;&nbsp;Medisave: <input id="sumMedisave" type="number" /><br>
+      <br>
+      <input type="button" value="Compute"
+             onclick="document.getElementById('result').innerHTML = compute(config, getInput());" />
+    </form>
+
+    <br><hr>
+    <h3>Results</h3>
+    <div id="result"></div>
+
+    <script>
+      let config = {
+          "version": "2016-01-01", // info as per date in version
+          "ordinaryWageCeiling": 6000, // CPF contributions computed based on this amount only, even if salary is higher
+          "retirementSchemeAge": 55, // age when Ordinary Account & Special Account are combined into Retirement Account
+          "payoutAge": 65, // age when payouts start
+          "retirementSumYear": 2019, // the year the retirement sums are based on - will be inflated in subsequent years
+          "retirementSum": 264000, // based on Enhanced Retirement Sum which gives highest payout of about $2000 under default Standard Plan
+          "retirementSumsByType": {
+            "basic": {
+                "sum": 88000,
+                "payouts": {
+                  "standard": 790
+                }
+            },
+            "full": {
+                "sum": 176000,
+                "payouts": {
+                  "standard": 1450
+                }
+            },
+            "enhanced": {
+                "sum": 264000,
+                "payouts": {
+                  "standard": 2110
+                }
+            }
+          },
+          "inflationRate": 5, // rates are in %, i.e. a value of 5 means 5%
+          "interestRatesByAccount": { // interest rates by account
+            "ordinary": 2.5,
+            "special": 4,
+            "medisave": 4,
+            "retirement": 4
+          },
+
+          /**
+           * <age> => [
+           *     'employee' => <employee contribution rate - % of wage>,
+           *     'employer' => <employer contribution rate - % of wage>,
+           * ]
+           */
+          "contributionRatesByAge": {
+            "55": { // 55 and below
+              "employee": 20,
+              "employer": 17
+            },
+            "60": { // above 55 to 60
+              "employee": 13,
+              "employer": 13
+            },
+            "65": { // above 60 to 65
+              "employee": 9,
+              "employer": 7.5
+            },
+            "1000": { // above 65
+              "employee": 7.5,
+              "employer": 5
+            }
+          },
+
+          /**
+           * <age> => [
+           *    'ordinary' => <Ordinary Account allocation rate - % of wage>,
+           *    'special' => <Special Acccount allocation rate - % of wage>,
+           *    'medisave' => <Medisave Account allocation rate - % of wage>,
+           * ]
+           */
+          "allocationRatesByAge": {
+            "35": { // 35 and below
+              "ordinary": 23,
+              "special": 6,
+              "medisave": 8
+            },
+            "45": { // above 35 to 45
+              "ordinary": 21,
+              "special": 7,
+              "medisave": 9
+            },
+            "50": { // above 45 to 50
+              "ordinary": 19,
+              "special": 8,
+              "medisave": 10
+            },
+            "55": { // above 50 to 55
+              "ordinary": 15,
+              "special": 11.5,
+              "medisave": 10.5
+            },
+            "60": { // above 55 to 60
+              "ordinary": 12,
+              "special": 3.5,
+              "medisave": 10.5
+            },
+            "65": { // above 60 to 65
+              "ordinary": 3.5,
+              "special": 2.5,
+              "medisave": 10.5
+            },
+            "1000": { // above 65
+              "ordinary": 0.75,
+              "special": 0.75,
+              "medisave": 7.875
+            }
+          }
+        };
+    </script>
+
+    <script>
+      function getInput() {
+          return {
+              "age": parseInt(document.getElementById('age').value),
+              "monthlySalary": parseInt(document.getElementById('monthlySalary').value),
+              "includeEmployeeContribution": document.getElementById('includeEmployeeContribution').checked,
+              "includeEmployerContribution": document.getElementById('includeEmployerContribution').checked,
+              "annualTopupsByAccount": {
+                "ordinary": parseInt(document.getElementById('annualTopupOrdinary').value),
+                "special": parseInt(document.getElementById('annualTopupSpecial').value),
+                "medisave": parseInt(document.getElementById('annualTopupMedisave').value)
+              },
+              "sumsByAccount": {
+                "ordinary": parseInt(document.getElementById('sumOrdinary').value),
+                "special": parseInt(document.getElementById('sumSpecial').value),
+                "medisave": parseInt(document.getElementById('sumMedisave').value)
+              }
+          };
+      }
+
+      function compute(config, input) {
+          let output = '';
+          let result = {
+              'ordinary': input['sumsByAccount']['ordinary'],
+              'special': input['sumsByAccount']['special'],
+              'medisave': input['sumsByAccount']['medisave'],
+          };
+
+          output = JSON.stringify(input) + '<br><br>';
+          for (year = 1; year <= (config['payoutAge'] - input['age']); year++) {
+              currentAge = input['age'] + year;
+
+              contributionRate = [];
+              Object.entries(config['contributionRatesByAge']).some(([age, contributionRateForAge]) => {
+                  if (currentAge <= age) {
+                      contributionRate = contributionRateForAge;
+                      return true;
+                  }
+              });
+              result['contributionRate'] = contributionRate;
+
+              allocationRate = [];
+              Object.entries(config['allocationRatesByAge']).some(([age, allocationRateForAge]) => {
+                  if (currentAge <= age) {
+                      allocationRate = allocationRateForAge;
+                      return true;
+                  }
+              });
+              result['allocationRate'] = allocationRate;
+
+              totalContributionRate = (input['includeEmployeeContribution'] ? contributionRate['employee'] : 0)
+                + (input['includeEmployerContribution'] ? contributionRate['employer'] : 0);
+              contributionAmount = (totalContributionRate / 100)
+                  * Math.min(config['ordinaryWageCeiling'], input['monthlySalary']);
+
+              totalAllocationRate = allocationRate['ordinary'] + allocationRate['special'] + allocationRate['medisave'];
+              ['ordinary', 'special', 'medisave'].forEach(function (account) {
+                  interestRate = config['interestRatesByAccount'][account];
+                  allocationAmount = ((allocationRate[account] / totalAllocationRate) * contributionAmount)
+                      + input['annualTopupsByAccount'][account];
+                  result[account] = Math.round((1 + interestRate / 100) * (result[account] + allocationAmount));
+              });
+
+              output += 'End of Year ' + year + ' (age ' + currentAge + '): ' + JSON.stringify(result) + '<br>';
+          }
+
+          output += '<br>'
+              + 'Estimated retirement sums (' + config['inflationRate'] + '% inflation rate factored in):<br>';
+
+          Object.entries(config['retirementSumsByType']).forEach(([type, typeInfo]) => {
+              sum = Math.round(typeInfo['sum'] * Math.pow(
+                  (1 + parseFloat(config['inflationRate']) / 100),
+                  (parseInt((new Date()).getFullYear()) - config['retirementSumYear'])
+                  + (config['payoutAge'] - input['age'])
+              ));
+
+              output += type + ': ' + sum
+                  + ' (payout of $' + typeInfo['payouts']['standard'] + ' under default Standard Plan)<br>';
+          });
+
+          output += '<br><br>';
+
+          return output;
+      }
+    </script>
+  </body>
+
+</html>
