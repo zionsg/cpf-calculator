@@ -2,9 +2,9 @@
 <html>
   <!--
   /**
-   * @todo Factor in additional 1% interest, cap on Medisave contributions
+   * @todo To factor in bonus and additional wage ceiling
    * @link https://github.com/zionsg/cpf-calculator/
-   * @version 2019-04-01T23:00+08:00
+   * @version 2019-04-02T14:55+08:00
    */
   -->
   <head>
@@ -57,6 +57,11 @@
           "version": "2016-01-01", // info as per date in version
 
           "ordinaryWageCeiling": 6000, // CPF contributions computed based on this amount only, even if salary is higher
+
+          "basicHealthcareSum": {
+            "year": 2019, // the year the amount is based on
+            "amount": 57200 // any contributions to Medisave beyond this amount are channeled to Special/Retirement Acc
+          },
 
           "retirementScheme": {
             "year": 2019, // the year the retirement sums are based on - will be inflated in subsequent years
@@ -186,6 +191,7 @@
 
       function compute(config, input) {
           let output = '';
+          let retirementAccountAge = config['retirementScheme']['retirementAccountAge'];
           let result = {
               'ordinary': input['sumsByAccount']['ordinary'],
               'special': input['sumsByAccount']['special'],
@@ -194,9 +200,10 @@
 
           output = JSON.stringify(input) + '<br><br>';
           for (year = 1; year <= (config['retirementScheme']['payoutAge'] - input['age']); year++) {
-              currentAge = input['age'] + year;
+              let currentAge = input['age'] + year;
 
-              contributionRate = [];
+              // Get contribution rate for current age
+              let contributionRate = [];
               Object.entries(config['contributionRatesByAge']).some(([age, contributionRateForAge]) => {
                   if (currentAge <= age) {
                       contributionRate = contributionRateForAge;
@@ -205,7 +212,8 @@
               });
               result['contributionRate'] = contributionRate;
 
-              allocationRate = [];
+              // Get allocation rate for current age
+              let allocationRate = [];
               Object.entries(config['allocationRatesByAge']).some(([age, allocationRateForAge]) => {
                   if (currentAge <= age) {
                       allocationRate = allocationRateForAge;
@@ -214,43 +222,53 @@
               });
               result['allocationRate'] = allocationRate;
 
-              totalContributionRate = (input['includeEmployeeContribution'] ? contributionRate['employee'] : 0)
-                + (input['includeEmployerContribution'] ? contributionRate['employer'] : 0);
-              contributionAmount = (totalContributionRate / 100)
+              // Compute contribution amount
+              let totalContributionRate = (input['includeEmployeeContribution'] ? contributionRate['employee'] : 0)
+                  + (input['includeEmployerContribution'] ? contributionRate['employer'] : 0);
+              let contributionAmount = (totalContributionRate / 100)
                   * Math.min(config['ordinaryWageCeiling'], input['monthlySalary']);
 
-              totalAllocationRate = allocationRate['ordinary'] + allocationRate['special'] + allocationRate['medisave'];
+              // Compute amounts allocated to each account
+              let totalAllocationRate = allocationRate['ordinary'] + allocationRate['special'] + allocationRate['medisave'];
               ['ordinary', 'special', 'medisave'].forEach(function (account) {
-                  interestRate = config['interestRatesByAccount'][account];
-                  allocationAmount = ((allocationRate[account] / totalAllocationRate) * contributionAmount)
+                  let interestRate = config['interestRatesByAccount'][account];
+                  let allocationAmount = ((allocationRate[account] / totalAllocationRate) * contributionAmount)
                       + input['annualTopupsByAccount'][account];
                   result[account] = Math.round((1 + interestRate / 100) * (result[account] + allocationAmount));
               });
 
-              output += (config['retirementSchemeAge'] == currentAge ? '<mark>' : '')
-                  + 'End of Year ' + year + ' (age ' + currentAge + '): ' + JSON.stringify(result) + '<br>'
-                  + (config['retirementSchemeAge'] == currentAge ? '</mark>' : '');
-          }
+              // Any excess in Medisave beyond the Basic Healthcare Sum is put into Special/Retirement Account
+              let excess = result['medisave'] - config['basicHealthcareSum']['amount'];
+              if (excess > 0) {
+                  result['medisave'] -= excess;
+                  result['special'] += excess;
+              }
 
+              // Output
+              output += (retirementAccountAge == currentAge ? '<mark>' : '')
+                  + 'End of Year ' + year + ' (age ' + currentAge + '): ' + JSON.stringify(result) + '<br>'
+                  + (retirementAccountAge == currentAge ? '</mark>' : '');
+          } // end years till payoutAge
+
+          // Output
           output += '<br>'
-              + 'Estimated amount required in Retirement Account at age '
-              + config['retirementScheme']['retirementAccountAge']
+              + 'Estimated amount required in Retirement Account at age ' + retirementAccountAge
               + ' (' + config['retirementScheme']['inflationRate'] + '% inflation rate factored in):<br>';
 
+          // Compute required retirement sums factoring in inflation rate
           Object.entries(config['retirementScheme']['sums']).forEach(([type, typeInfo]) => {
-              sum = Math.round(typeInfo['amount'] * Math.pow(
+              let inflatedSum = Math.round(typeInfo['amount'] * Math.pow(
                   (1 + parseFloat(config['retirementScheme']['inflationRate']) / 100),
                   (parseInt((new Date()).getFullYear()) - config['retirementScheme']['year'])
-                  + (config['retirementScheme']['retirementAccountAge'] - input['age'])
+                  + (retirementAccountAge - input['age'])
               ));
 
-              output += '&nbsp;&nbsp;' + type + ' retirement sum: ' + sum
+              output += '&nbsp;&nbsp;' + type + ' retirement sum: ' + inflatedSum
                   + ' (payout of up to $' + typeInfo['payouts']['standard'] + ' under default Standard Plan)<br>';
           });
 
-          output += '<br><br>';
-
-          return output;
+          // Return output
+          return output + '<br><em>(sums are rounded off during calculation)</em><br><br>';
       }
     </script>
   </body>
