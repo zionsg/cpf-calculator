@@ -2,6 +2,7 @@
 <html>
   <!--
   /**
+   * @todo To factor in additional interest of 1% for first 60000 (covering up to 20000 from Ordinary Acc)
    * @todo To factor in bonus and additional wage ceiling
    * @link https://github.com/zionsg/cpf-calculator/
    * @version 2019-04-02T14:55+08:00
@@ -34,6 +35,7 @@
       <br>
 
       Additional annual cash top-ups for each account:<br>
+      <em>(for SA under age 55, max top-up = current full retirement sum - SA savings - amount drawn from SA for investment)</em><br>
       &nbsp;&nbsp;Ordinary: <input id="annualTopupOrdinary" type="number" /><br>
       &nbsp;&nbsp;Special: &nbsp;<input id="annualTopupSpecial" type="number" /><br>
       &nbsp;&nbsp;Medisave: <input id="annualTopupMedisave" type="number" /><br>
