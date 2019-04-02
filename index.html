@@ -33,7 +33,7 @@
       <input id="includeEmployerContribution" type="checkbox" checked /> Include employer contribution<br>
       <br>
 
-      Annual top-ups for each account:<br>
+      Additional annual cash top-ups for each account:<br>
       &nbsp;&nbsp;Ordinary: <input id="annualTopupOrdinary" type="number" /><br>
       &nbsp;&nbsp;Special: &nbsp;<input id="annualTopupSpecial" type="number" /><br>
       &nbsp;&nbsp;Medisave: <input id="annualTopupMedisave" type="number" /><br>
@@ -55,31 +55,36 @@
     <script>
       let config = {
           "version": "2016-01-01", // info as per date in version
+
           "ordinaryWageCeiling": 6000, // CPF contributions computed based on this amount only, even if salary is higher
-          "retirementSchemeAge": 55, // age when Ordinary Account & Special Account are combined into Retirement Account
-          "payoutAge": 65, // age when payouts start
-          "retirementSumYear": 2019, // the year the retirement sums are based on - will be inflated in subsequent years
-          "retirementSumsByType": {
-            "basic": {
-                "sum": 88000,
-                "payouts": {
-                  "standard": 790
-                }
-            },
-            "full": {
-                "sum": 176000,
-                "payouts": {
-                  "standard": 1450
-                }
-            },
-            "enhanced": {
-                "sum": 264000,
-                "payouts": {
-                  "standard": 2110
-                }
+
+          "retirementScheme": {
+            "year": 2019, // the year the retirement sums are based on - will be inflated in subsequent years
+            "retirementAccountAge": 55,  // age when Ordinary Account & Special Account are combined into Retirement Acc
+            "payoutAge": 65, // age when payouts start
+            "inflationRate": 3, // inflation rate for estimating sums. Rates are in %, i.e. a value of 5 means 5%.
+            "sums": {
+              "basic": {
+                  "amount": 88000,
+                  "payouts": {
+                    "standard": 790
+                  }
+              },
+              "full": {
+                  "amount": 176000,
+                  "payouts": {
+                    "standard": 1450
+                  }
+              },
+              "enhanced": {
+                  "amount": 264000,
+                  "payouts": {
+                    "standard": 2110
+                  }
+              }
             }
           },
-          "inflationRate": 3, // rates are in %, i.e. a value of 5 means 5%
+
           "interestRatesByAccount": { // interest rates by account
             "ordinary": 2.5,
             "special": 4,
@@ -162,19 +167,19 @@
     <script>
       function getInput() {
           return {
-              "age": parseInt(document.getElementById('age').value),
-              "monthlySalary": parseInt(document.getElementById('monthlySalary').value),
+              "age": parseInt(document.getElementById('age').value || 0),
+              "monthlySalary": parseInt(document.getElementById('monthlySalary').value || 0),
               "includeEmployeeContribution": document.getElementById('includeEmployeeContribution').checked,
               "includeEmployerContribution": document.getElementById('includeEmployerContribution').checked,
               "annualTopupsByAccount": {
-                "ordinary": parseInt(document.getElementById('annualTopupOrdinary').value),
-                "special": parseInt(document.getElementById('annualTopupSpecial').value),
-                "medisave": parseInt(document.getElementById('annualTopupMedisave').value)
+                "ordinary": parseInt(document.getElementById('annualTopupOrdinary').value || 0),
+                "special": parseInt(document.getElementById('annualTopupSpecial').value || 0),
+                "medisave": parseInt(document.getElementById('annualTopupMedisave').value || 0)
               },
               "sumsByAccount": {
-                "ordinary": parseInt(document.getElementById('sumOrdinary').value),
-                "special": parseInt(document.getElementById('sumSpecial').value),
-                "medisave": parseInt(document.getElementById('sumMedisave').value)
+                "ordinary": parseInt(document.getElementById('sumOrdinary').value || 0),
+                "special": parseInt(document.getElementById('sumSpecial').value || 0),
+                "medisave": parseInt(document.getElementById('sumMedisave').value || 0)
               }
           };
       }
@@ -188,7 +193,7 @@
           };
 
           output = JSON.stringify(input) + '<br><br>';
-          for (year = 1; year <= (config['payoutAge'] - input['age']); year++) {
+          for (year = 1; year <= (config['retirementScheme']['payoutAge'] - input['age']); year++) {
               currentAge = input['age'] + year;
 
               contributionRate = [];
@@ -228,14 +233,15 @@
           }
 
           output += '<br>'
-              + 'Estimated amount required in Retirement Account at age ' + config['retirementSchemeAge'] + ' ('
-              + config['inflationRate'] + '% inflation rate factored in):<br>';
+              + 'Estimated amount required in Retirement Account at age '
+              + config['retirementScheme']['retirementAccountAge']
+              + ' (' + config['retirementScheme']['inflationRate'] + '% inflation rate factored in):<br>';
 
-          Object.entries(config['retirementSumsByType']).forEach(([type, typeInfo]) => {
-              sum = Math.round(typeInfo['sum'] * Math.pow(
-                  (1 + parseFloat(config['inflationRate']) / 100),
-                  (parseInt((new Date()).getFullYear()) - config['retirementSumYear'])
-                  + (config['retirementSchemeAge'] - input['age'])
+          Object.entries(config['retirementScheme']['sums']).forEach(([type, typeInfo]) => {
+              sum = Math.round(typeInfo['amount'] * Math.pow(
+                  (1 + parseFloat(config['retirementScheme']['inflationRate']) / 100),
+                  (parseInt((new Date()).getFullYear()) - config['retirementScheme']['year'])
+                  + (config['retirementScheme']['retirementAccountAge'] - input['age'])
               ));
 
               output += '&nbsp;&nbsp;' + type + ' retirement sum: ' + sum
