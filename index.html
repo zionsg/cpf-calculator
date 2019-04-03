@@ -195,6 +195,7 @@
           let output = '';
           let retirementAccountAge = config['retirementScheme']['retirementAccountAge'];
           let result = {
+              'retirement': 0,
               'ordinary': input['sumsByAccount']['ordinary'],
               'special': input['sumsByAccount']['special'],
               'medisave': input['sumsByAccount']['medisave'],
@@ -231,9 +232,16 @@
                   * Math.min(config['ordinaryWageCeiling'], input['monthlySalary']);
 
               // Compute amounts allocated to each account
-              let totalAllocationRate = allocationRate['ordinary'] + allocationRate['special'] + allocationRate['medisave'];
+              let totalAllocationRate =
+                  allocationRate['ordinary'] + allocationRate['special'] + allocationRate['medisave'];
               ['ordinary', 'special', 'medisave'].forEach(function (account) {
                   let interestRate = config['interestRatesByAccount'][account];
+
+                  // At retirementAccountAge, ordinary and special accounts are combined. Allocation rate not specified.
+                  if (currentAge >= retirementAccountAge && ('ordinary' == account || 'special' == account)) {
+                      interestRate = config['interestRatesByAccount']['retirement'];
+                  }
+
                   let allocationAmount = ((allocationRate[account] / totalAllocationRate) * contributionAmount)
                       + input['annualTopupsByAccount'][account];
                   result[account] = Math.round((1 + interestRate / 100) * (result[account] + allocationAmount));
@@ -246,9 +254,20 @@
                   result['special'] += excess;
               }
 
+              // At retirementAccountAge, ordinary and special accounts are combined
+              // Copy tmpResult for display so as not to mess up result
+              let tmpResult = JSON.parse(JSON.stringify(result)); // prevent reference
+              if (currentAge < retirementAccountAge) {
+                  delete tmpResult['retirement'];
+              } else {
+                  tmpResult['retirement'] = tmpResult['ordinary'] + tmpResult['special'];
+                  delete tmpResult['ordinary'];
+                  delete tmpResult['special'];
+              }
+
               // Output
               output += (retirementAccountAge == currentAge ? '<mark>' : '')
-                  + 'End of Year ' + year + ' (age ' + currentAge + '): ' + JSON.stringify(result) + '<br>'
+                  + 'End of Year ' + year + ' (age ' + currentAge + '): ' + JSON.stringify(tmpResult) + '<br>'
                   + (retirementAccountAge == currentAge ? '</mark>' : '');
           } // end years till payoutAge
 
