@@ -2,10 +2,9 @@
 <html>
   <!--
   /**
-   * @todo To factor in additional interest of 1% for first 60000 (covering up to 20000 from Ordinary Acc)
    * @todo To factor in bonus and additional wage ceiling
    * @link https://github.com/zionsg/cpf-calculator/
-   * @version 2019-04-02T14:55+08:00
+   * @version 2019-04-06T00:55+08:00
    */
   -->
   <head>
@@ -51,7 +50,7 @@
     </form>
 
     <br><hr>
-    <h3>Results</h3>
+    <h3>Results (see console log in browser for calculation details)</h3>
     <div id="result"></div>
 
     <script>
@@ -97,6 +96,12 @@
             "special": 4,
             "medisave": 4,
             "retirement": 4
+          },
+
+          "additionalInterest": { // additional 1% interest for 1st $60000 (OA + SA), capped at $20000 for OA
+            "rate": 1,
+            "totalCap": 60000,
+            "ordinaryCap": 20000
           },
 
           /**
@@ -172,6 +177,27 @@
     </script>
 
     <script>
+      /**
+       * Simple string replacement function
+       *
+       * @example sprintf('<img src="%s" class="%s" />', 'a.png', 'beta') => <img src="a.png" class="beta" />
+       * @param   string format    Use "%s" as placeholder
+       * @param   ...    arguments Add as many arguments as there are %s after the format
+       * @return  string
+       */
+      function sprintf(format) {
+          for (let i = 1; i < arguments.length; i++) {
+              format = format.replace(/%s/, arguments[i]);
+          }
+
+          return format;
+      }
+
+      /**
+       * Get input from form
+       *
+       * @return object
+       */
       function getInput() {
           return {
               "age": parseInt(document.getElementById('age').value || 0),
@@ -191,20 +217,33 @@
           };
       }
 
+      /**
+       * Compute CPF contributions
+       *
+       * @param object config CPF config
+       * @param object input Form input
+       * @return void
+       */
       function compute(config, input) {
           let output = '';
+          let indent4 = ' '.repeat(4);
+          let indent8 = ' '.repeat(8);
           let monthsInYear = 12;
           let retirementAccountAge = config['retirementScheme']['retirementAccountAge'];
+          let inflationRate = config['retirementScheme']['inflationRate'];
           let result = {
-              'retirement': 0,
               'ordinary': input['sumsByAccount']['ordinary'],
               'special': input['sumsByAccount']['special'],
               'medisave': input['sumsByAccount']['medisave'],
           };
 
+          console.clear();
+          console.log('Input: ' + JSON.stringify(input));
+
           output = JSON.stringify(input) + '<br><br>';
-          for (year = 1; year <= (config['retirementScheme']['payoutAge'] - input['age']); year++) {
+          for (let year = 1; year <= (config['retirementScheme']['payoutAge'] - input['age']); year++) {
               let currentAge = input['age'] + year;
+              console.log(sprintf('[Year %s, age %s]', year, currentAge));
 
               // Get contribution rate for current age
               let contributionRate = [];
@@ -214,7 +253,7 @@
                       return true;
                   }
               });
-              result['contributionRate'] = contributionRate;
+              console.log(sprintf('%sContribution rates: %s', indent4, JSON.stringify(contributionRate)));
 
               // Get allocation rate for current age
               let allocationRate = [];
@@ -224,28 +263,84 @@
                       return true;
                   }
               });
-              result['allocationRate'] = allocationRate;
+              console.log(sprintf('%sAllocation rates: %s', indent4, JSON.stringify(allocationRate)));
 
               // Compute contribution amount
               let totalContributionRate = (input['includeEmployeeContribution'] ? contributionRate['employee'] : 0)
                   + (input['includeEmployerContribution'] ? contributionRate['employer'] : 0);
               let contributionAmount = monthsInYear * (totalContributionRate / 100)
                   * Math.min(config['ordinaryWageCeiling'], input['monthlySalary']);
+              console.log(sprintf('%sEffective contribution rate: %s%', indent4, totalContributionRate));
+              console.log(sprintf('%sContribution amount: $%s', indent4, Math.round(contributionAmount)));
 
               // Compute amounts allocated to each account
               let totalAllocationRate =
                   allocationRate['ordinary'] + allocationRate['special'] + allocationRate['medisave'];
+              let additionalInterest = config['additionalInterest']['rate'];
+              let additionalInterestAppliedTotal = 0;
               ['ordinary', 'special', 'medisave'].forEach(function (account) {
+                  console.log(sprintf('%s%s account', indent4, account));
                   let interestRate = config['interestRatesByAccount'][account];
 
                   // At retirementAccountAge, ordinary and special accounts are combined. Allocation rate not specified.
                   if (currentAge >= retirementAccountAge && ('ordinary' == account || 'special' == account)) {
                       interestRate = config['interestRatesByAccount']['retirement'];
                   }
+                  console.log(sprintf('%sInterest rate: %s%', indent8, interestRate));
 
                   let allocationAmount = ((allocationRate[account] / totalAllocationRate) * contributionAmount)
                       + input['annualTopupsByAccount'][account];
-                  result[account] = Math.round((1 + interestRate / 100) * (result[account] + allocationAmount));
+
+                  let newAccountAmountBeforeInterest = result[account] + allocationAmount;
+                  let additionalInterestAppliedAmount = 0;
+                  if ('ordinary' == account) {
+                      additionalInterestAppliedAmount = Math.min(
+                          config['additionalInterest']['ordinaryCap'],
+                          newAccountAmountBeforeInterest
+                      );
+                      additionalInterestAppliedTotal += additionalInterestAppliedAmount;
+                  } else {
+                      let capLeft = config['additionalInterest']['totalCap'] - additionalInterestAppliedTotal;
+                      capLeft = Math.max(0, capLeft);
+
+                      additionalInterestAppliedAmount = Math.min(
+                          capLeft,
+                          newAccountAmountBeforeInterest
+                      );
+                      additionalInterestAppliedTotal += additionalInterestAppliedAmount;
+                  }
+
+                  console.log(sprintf('%sCurrent amount: $%s', indent8, result[account]));
+                  console.log(sprintf('%sAllocated amount: $%s', indent8, Math.round(allocationAmount)));
+                  console.log(sprintf(
+                      '%sNew amount before interest: $%s',
+                      indent8, Math.round(newAccountAmountBeforeInterest)
+                  ));
+                  console.log(sprintf(
+                      '%sAdditional %s% interest applied to first $%s for combined accs capped at $%s for Ordinary Acc',
+                      indent8,
+                      additionalInterest,
+                      config['additionalInterest']['totalCap'],
+                      config['additionalInterest']['ordinaryCap']
+                  ));
+                  console.log(sprintf(
+                      '%sAdditional interest applied to: $%s',
+                      indent8,
+                      Math.round(additionalInterestAppliedAmount)
+                  ));
+                  console.log(sprintf(
+                      '%sTotal amount applied with additional interest for year: $%s',
+                      indent8,
+                      Math.round(additionalInterestAppliedTotal)
+                  ));
+
+                  // additional 1% interest on first $60000 of (OA + SA)
+                  result[account] = Math.round(
+                      (1 + (interestRate + additionalInterest) / 100) * additionalInterestAppliedAmount
+                      +
+                      (1 + interestRate / 100) * (newAccountAmountBeforeInterest - additionalInterestAppliedAmount)
+                  );
+                  console.log('%sNew amount after interest: $%s', indent8, result[account]);
               });
 
               // Any excess in Medisave beyond the Basic Healthcare Sum is put into Special/Retirement Account
@@ -254,22 +349,45 @@
                   result['medisave'] -= excess;
                   result['special'] += excess;
               }
+              console.log(sprintf('%sBasic Healthcare Sum: $%s'), indent4, config['basicHealthcareSum']['amount']);
+              console.log(sprintf(
+                  '%sExcess in Medisave beyond Basic Healthcare Sum moved to Special/Retirement Acc: $%s',
+                  indent4,
+                  Math.max(0, excess)
+              ));
 
               // At retirementAccountAge, ordinary and special accounts are combined
-              // Copy tmpResult for display so as not to mess up result
-              let tmpResult = JSON.parse(JSON.stringify(result)); // prevent reference
-              if (currentAge < retirementAccountAge) {
-                  delete tmpResult['retirement'];
-              } else {
-                  tmpResult['retirement'] = tmpResult['ordinary'] + tmpResult['special'];
-                  delete tmpResult['ordinary'];
-                  delete tmpResult['special'];
-              }
+              retirementStr = (retirementAccountAge > currentAge) ? '' : sprintf(
+                  ' (Retirement Acc = Ordinary Acc + Special Acc = %s)',
+                  result['ordinary'] + result['special']
+              );
 
               // Output
               output += (retirementAccountAge == currentAge ? '<mark>' : '')
-                  + 'End of Year ' + year + ' (age ' + currentAge + '): ' + JSON.stringify(tmpResult) + '<br>'
+                  + 'End of Year ' + year + ' (age ' + currentAge + '): ' + JSON.stringify(result)
+                  + retirementStr + '<br>'
                   + (retirementAccountAge == currentAge ? '</mark>' : '');
+
+              // Compute required retirement sums factoring in inflation rate
+              console.log(sprintf(
+                  '%sEstimated retirement sums based on %s% inflation rate per year',
+                  indent4,
+                  inflationRate
+              ));
+              Object.entries(config['retirementScheme']['sums']).forEach(([type, typeInfo]) => {
+                  let inflatedSum = Math.round(typeInfo['amount'] * Math.pow(
+                      (1 + parseFloat(config['retirementScheme']['inflationRate']) / 100),
+                      (parseInt((new Date()).getFullYear()) - config['retirementScheme']['year']) + year
+                  ));
+
+                  console.log(sprintf(
+                      '%s%s: $%s (payout of up to $%s under default Standard Plan)',
+                      indent8,
+                      type,
+                      inflatedSum,
+                      typeInfo['payouts']['standard']
+                  ));
+              });
           } // end years till payoutAge
 
           // Output
