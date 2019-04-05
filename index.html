@@ -69,7 +69,7 @@
             "year": 2019, // the year the retirement sums are based on - will be inflated in subsequent years
             "retirementAccountAge": 55,  // age when Ordinary Account & Special Account are combined into Retirement Acc
             "payoutAge": 65, // age when payouts start
-            "inflationRate": 3, // inflation rate for estimating sums. Rates are in %, i.e. a value of 5 means 5%.
+            "inflationRate": 5, // inflation rate for estimating sums. Rates are in %, i.e. a value of 5 means 5%.
             "sums": {
               "basic": {
                   "amount": 88000,
@@ -193,6 +193,7 @@
 
       function compute(config, input) {
           let output = '';
+          let monthsInYear = 12;
           let retirementAccountAge = config['retirementScheme']['retirementAccountAge'];
           let result = {
               'retirement': 0,
@@ -228,7 +229,7 @@
               // Compute contribution amount
               let totalContributionRate = (input['includeEmployeeContribution'] ? contributionRate['employee'] : 0)
                   + (input['includeEmployerContribution'] ? contributionRate['employer'] : 0);
-              let contributionAmount = (totalContributionRate / 100)
+              let contributionAmount = monthsInYear * (totalContributionRate / 100)
                   * Math.min(config['ordinaryWageCeiling'], input['monthlySalary']);
 
               // Compute amounts allocated to each account
