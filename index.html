@@ -270,7 +270,20 @@
                   + (input['includeEmployerContribution'] ? contributionRate['employer'] : 0);
               let contributionAmount = monthsInYear * (totalContributionRate / 100)
                   * Math.min(config['ordinaryWageCeiling'], input['monthlySalary']);
-              console.log(sprintf('%sEffective contribution rate: %s%', indent4, totalContributionRate));
+              console.log(sprintf(
+                  '%sContribution based on $%s from monthly salary of $%s (capped at Ordinary Wage Ceiling of $%s)',
+                  indent4,
+                  Math.min(config['ordinaryWageCeiling'], input['monthlySalary']),
+                  input['monthlySalary'],
+                  config['ordinaryWageCeiling']
+              ));
+              console.log(sprintf(
+                  '%sEffective contribution rate: %s% (employee:%s, employer:%s)',
+                  indent4,
+                  totalContributionRate,
+                  (input['includeEmployeeContribution'] ? 'yes' : 'no'),
+                  (input['includeEmployerContribution'] ? 'yes' : 'no')
+              ));
               console.log(sprintf('%sContribution amount: $%s', indent4, Math.round(contributionAmount)));
 
               // Compute amounts allocated to each account
@@ -361,6 +374,11 @@
                   ' (Retirement Acc = Ordinary Acc + Special Acc = %s)',
                   result['ordinary'] + result['special']
               );
+              console.log(sprintf(
+                  '%sRetirement Acc = Ordinary Acc + Special Acc = $%s',
+                  indent4,
+                  result['ordinary'] + result['special']
+              ));
 
               // Output
               output += (retirementAccountAge == currentAge ? '<mark>' : '')
@@ -393,7 +411,8 @@
           // Output
           output += '<br>'
               + 'Estimated amount required in Retirement Account at age ' + retirementAccountAge
-              + ' (' + config['retirementScheme']['inflationRate'] + '% inflation rate factored in):<br>';
+              + ' (not payout age of ' + config['retirementScheme']['payoutAge'] + ')'
+              + ' with ' + config['retirementScheme']['inflationRate'] + '% inflation rate per year factored in:<br>';
 
           // Compute required retirement sums factoring in inflation rate
           Object.entries(config['retirementScheme']['sums']).forEach(([type, typeInfo]) => {
