@@ -26,7 +26,9 @@
   <body>
     <h3>CPF Calculator</h3>
     <form>
-      Current age: <input id="age" type="number" /><br><br>
+      <input id="maskInput" type="checkbox" onclick="maskInputFields();" /> Mask/hide input (so that no one can see your salary ;)<br><br>
+
+      Current age: &nbsp;&nbsp;&nbsp;<input id="age" type="number" /><br><br>
 
       Monthly salary: <input id="monthlySalary" type="number" /> (contributions capped at Ordinary Wage Ceiling)<br>
       <input id="includeEmployeeContribution" type="checkbox" checked /> Include employee contribution<br>
@@ -44,6 +46,9 @@
       &nbsp;&nbsp;Ordinary: <input id="sumOrdinary" type="number" /><br>
       &nbsp;&nbsp;Special: &nbsp;<input id="sumSpecial" type="number" /><br>
       &nbsp;&nbsp;Medisave: <input id="sumMedisave" type="number" /><br>
+      <br>
+
+      <input id="transferOrdinaryToSpecialAnnually" type="checkbox" /> Transfer all from Ordinary Account to Special Account every year<br>
       <br>
       <input type="button" value="Compute"
              onclick="document.getElementById('result').innerHTML = compute(config, getInput());" />
@@ -194,12 +199,27 @@
       }
 
       /**
+       * Mask/unmask input fields
+       *
+       * @return void
+       */
+      function maskInputFields() {
+         let mask = document.getElementById('maskInput').checked;
+         let inputs = document.querySelectorAll('input[type="number"]');
+
+         for (i = 0; i < inputs.length; i++) {
+             inputs[i].type = (mask ? 'password' : 'number');
+         }
+      }
+
+      /**
        * Get input from form
        *
        * @return object
        */
       function getInput() {
           return {
+              "maskInput": document.getElementById('maskInput').checked,
               "age": parseInt(document.getElementById('age').value || 0),
               "monthlySalary": parseInt(document.getElementById('monthlySalary').value || 0),
               "includeEmployeeContribution": document.getElementById('includeEmployeeContribution').checked,
@@ -213,7 +233,8 @@
                 "ordinary": parseInt(document.getElementById('sumOrdinary').value || 0),
                 "special": parseInt(document.getElementById('sumSpecial').value || 0),
                 "medisave": parseInt(document.getElementById('sumMedisave').value || 0)
-              }
+              },
+              "transferOrdinaryToSpecialAnnually": document.getElementById('transferOrdinaryToSpecialAnnually').checked
           };
       }
 
@@ -239,8 +260,10 @@
 
           console.clear();
           console.log('Input: ' + JSON.stringify(input));
+          if (!input['maskInput']) {
+              output = JSON.stringify(input) + '<br><br>';
+          }
 
-          output = JSON.stringify(input) + '<br><br>';
           for (let year = 1; year <= (config['retirementScheme']['payoutAge'] - input['age']); year++) {
               let currentAge = input['age'] + year;
               console.log(sprintf('[Year %s, age %s]', year, currentAge));
@@ -368,6 +391,18 @@
                   indent4,
                   Math.max(0, excess)
               ));
+
+              // Transfer OA to SA every year?
+              if (input['transferOrdinaryToSpecialAnnually']) {
+                  console.log(sprintf(
+                      '%sTransfer all from Ordinary Account to Special Account: $%s',
+                      indent4,
+                      result['ordinary']
+                  ));
+
+                  result['special'] += result['ordinary'];
+                  result['ordinary'] = 0;
+              }
 
               // At retirementAccountAge, ordinary and special accounts are combined
               retirementStr = (retirementAccountAge > currentAge) ? '' : sprintf(
