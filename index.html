@@ -202,17 +202,19 @@
       }
 
       /**
-       * Mask/unmask input fields
+       * Mask/unmask input fields - only number fields will be affected
        *
        * @return void
        */
       function maskInputFields() {
-         let mask = document.getElementById('maskInput').checked;
-         let inputs = document.querySelectorAll('input[type="number"]');
+          let mask = document.getElementById('maskInput').checked;
+          let fromType = (mask ? 'number' : 'password');
+          let toType = (mask ? 'password' : 'number');
+          let inputs = document.querySelectorAll('input[type="' + fromType + '"]');
 
-         for (i = 0; i < inputs.length; i++) {
-             inputs[i].type = (mask ? 'password' : 'number');
-         }
+          for (i = 0; i < inputs.length; i++) {
+              inputs[i].type = toType;
+          }
       }
 
       /**
