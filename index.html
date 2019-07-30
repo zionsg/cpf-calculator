@@ -29,9 +29,12 @@
   <body>
     <h3><a target="_blank" rel="noopener" href="https://github.com/zionsg/cpf-calculator/">CPF Calculator</a></h3>
     <form>
-      <input id="maskInput" type="checkbox" onclick="maskInputFields();" /> Mask/hide input (so that no one can see your salary ;)<br><br>
+      <input id="maskInput" type="checkbox" onclick="maskInputFields();" />
+      Mask/hide input (so that no one can see your salary ;)<br><br>
 
-      Current age: &nbsp;&nbsp;&nbsp;<input id="age" type="number" /><br><br>
+      Current age: <input id="age" type="number" /><br><br>
+
+      Inflation rate per year: <input id="inflationRate" type="number" value="5" /> %<br><br>
 
       Monthly salary: <input id="monthlySalary" type="number" /> (contributions capped at Ordinary Wage Ceiling)<br>
       <input id="includeEmployeeContribution" type="checkbox" checked /> Include employee contribution<br>
@@ -39,7 +42,9 @@
       <br>
 
       Additional annual cash top-ups for each account:<br>
-      <em>(for SA under age 55, max top-up = current full retirement sum - SA savings - amount drawn from SA for investment)</em><br>
+      <em>
+        (for SA under age 55, max top-up=current full retirement sum - SA savings - amount drawn from SA for investment)
+      </em><br>
       &nbsp;&nbsp;Ordinary: <input id="annualTopupOrdinary" type="number" /><br>
       &nbsp;&nbsp;Special: &nbsp;<input id="annualTopupSpecial" type="number" /><br>
       &nbsp;&nbsp;Medisave: <input id="annualTopupMedisave" type="number" /><br>
@@ -51,7 +56,8 @@
       &nbsp;&nbsp;Medisave: <input id="sumMedisave" type="number" /><br>
       <br>
 
-      <input id="transferOrdinaryToSpecialAnnually" type="checkbox" /> Transfer all from Ordinary Account to Special Account every year<br>
+      <input id="transferOrdinaryToSpecialAnnually" type="checkbox" />
+      Transfer all from Ordinary Account to Special Account every year<br>
       <br>
       <input type="button" value="Compute"
              onclick="document.getElementById('result').innerHTML = compute(config, getInput());" />
@@ -226,6 +232,9 @@
           return {
               "maskInput": document.getElementById('maskInput').checked,
               "age": parseInt(document.getElementById('age').value || 0),
+              "inflationRate": parseFloat(
+                  document.getElementById('inflationRate').value || config['retirementScheme']['inflationRate']
+              ),
               "monthlySalary": parseInt(document.getElementById('monthlySalary').value || 0),
               "includeEmployeeContribution": document.getElementById('includeEmployeeContribution').checked,
               "includeEmployerContribution": document.getElementById('includeEmployerContribution').checked,
@@ -256,7 +265,7 @@
           let indent8 = ' '.repeat(8);
           let monthsInYear = 12;
           let retirementAccountAge = config['retirementScheme']['retirementAccountAge'];
-          let inflationRate = config['retirementScheme']['inflationRate'];
+          let inflationRate = input['inflationRate'];
           let result = {
               'ordinary': input['sumsByAccount']['ordinary'],
               'special': input['sumsByAccount']['special'],
@@ -434,12 +443,12 @@
               ));
               Object.entries(config['retirementScheme']['sums']).forEach(([type, typeInfo]) => {
                   let inflatedSum = Math.round(typeInfo['amount'] * Math.pow(
-                      (1 + parseFloat(config['retirementScheme']['inflationRate']) / 100),
+                      (1 + (inflationRate / 100)),
                       (parseInt((new Date()).getFullYear()) - config['retirementScheme']['year']) + year
                   ));
 
                   console.log(sprintf(
-                      '%s%s: $%s (payout of up to $%s under default Standard Plan)',
+                      '%s%s: $%s (monthly payout of up to $%s under default Standard Plan)',
                       indent8,
                       type,
                       inflatedSum,
@@ -452,18 +461,19 @@
           output += '<br>'
               + 'Estimated amount required in Retirement Account at age ' + retirementAccountAge
               + ' (not payout age of ' + config['retirementScheme']['payoutAge'] + ')'
-              + ' with ' + config['retirementScheme']['inflationRate'] + '% inflation rate per year factored in:<br>';
+              + ' with <mark>' + inflationRate + '%</mark> inflation rate per year factored in:<br>';
 
           // Compute required retirement sums factoring in inflation rate
           Object.entries(config['retirementScheme']['sums']).forEach(([type, typeInfo]) => {
               let inflatedSum = Math.round(typeInfo['amount'] * Math.pow(
-                  (1 + parseFloat(config['retirementScheme']['inflationRate']) / 100),
+                  (1 + (inflationRate / 100)),
                   (parseInt((new Date()).getFullYear()) - config['retirementScheme']['year'])
                   + (retirementAccountAge - input['age'])
               ));
 
               output += '&nbsp;&nbsp;' + type + ' retirement sum: ' + inflatedSum
-                  + ' (payout of up to $' + typeInfo['payouts']['standard'] + ' under default Standard Plan)<br>';
+                  + ' (monthly payout of up to $' + typeInfo['payouts']['standard']
+                  + ' under default Standard Plan)<br>';
           });
 
           // Return output
