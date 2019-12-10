@@ -74,30 +74,30 @@
           "ordinaryWageCeiling": 6000, // CPF contributions computed based on this amount only, even if salary is higher
 
           "basicHealthcareSum": {
-            "year": 2019, // the year the amount is based on
-            "amount": 57200 // any contributions to Medisave beyond this amount are channeled to Special/Retirement Acc
+            "year": 2020, // the year the amount is based on
+            "amount": 60000 // any contributions to Medisave beyond this amount are channeled to Special/Retirement Acc
           },
 
           "retirementScheme": {
-            "year": 2019, // the year the retirement sums are based on - will be inflated in subsequent years
+            "year": 2020, // the year the retirement sums are based on - will be inflated in subsequent years
             "retirementAccountAge": 55,  // age when Ordinary Account & Special Account are combined into Retirement Acc
             "payoutAge": 65, // age when payouts start
             "inflationRate": 5, // inflation rate for estimating sums. Rates are in %, i.e. a value of 5 means 5%.
             "sums": {
               "basic": {
-                  "amount": 88000,
+                  "amount": 90500,
                   "payouts": {
-                    "standard": 790
+                    "standard": 790 // upper limit
                   }
               },
               "full": {
-                  "amount": 176000,
+                  "amount": 181000, // full = 2 x basic
                   "payouts": {
                     "standard": 1450
                   }
               },
-              "enhanced": {
-                  "amount": 264000,
+              "enhanced": { // enhanced = 3 x basic
+                  "amount": 271500,
                   "payouts": {
                     "standard": 2110
                   }
@@ -115,6 +115,15 @@
           "additionalInterest": { // additional 1% interest for 1st $60000 (OA + SA), capped at $20000 for OA
             "rate": 1,
             "totalCap": 60000,
+            "ordinaryCap": 20000
+          },
+
+          "additionalRetirementInterest": {
+            // From Jan 2016, those aged 55 and above will earn an additional 1% interest (on top of the usual)
+            // for 1st $30000 (OA + SA), capped at $20000 for OA
+            "age": 55,
+            "rate": 1,
+            "totalCap": 30000,
             "ordinaryCap": 20000
           },
 
@@ -384,12 +393,18 @@
                       Math.round(additionalInterestAppliedTotal)
                   ));
 
-                  // additional 1% interest on first $60000 of (OA + SA)
+                  // Additional 1% interest on first $60000 of (OA + SA)
                   result[account] = Math.round(
                       (1 + (interestRate + additionalInterest) / 100) * additionalInterestAppliedAmount
                       +
                       (1 + interestRate / 100) * (newAccountAmountBeforeInterest - additionalInterestAppliedAmount)
                   );
+
+                  // Additional 1% interest for those aged 55 and above on first $30000 of (OA + SA)
+                  if (currentAge >= config['additionalRetirementInterest']['age']) {
+                      // @todo To compute later :P
+                  }
+
                   console.log('%sNew amount after interest: $%s', indent8, result[account]);
               });
 
