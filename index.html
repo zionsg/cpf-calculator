@@ -2,9 +2,10 @@
 <html>
   <!--
   /**
+   * @todo To calculate contribution/interest monthly instead of yearly
    * @todo To factor in bonus and additional wage ceiling
    * @link https://github.com/zionsg/cpf-calculator/
-   * @version 2019-04-12T15:50+08:00
+   * @version 2022-01-15T13:15+08:00
    */
   -->
   <head>
@@ -27,7 +28,11 @@
   </head>
 
   <body>
-    <h3><a target="_blank" rel="noopener" href="https://github.com/zionsg/cpf-calculator/">CPF Calculator</a></h3>
+    <h3>
+      <a target="_blank" rel="noopener" href="https://github.com/zionsg/cpf-calculator/">CPF Calculator</a>
+      (updated rates for 2022)
+    </h3>
+
     <form>
       <input id="maskInput" type="checkbox" onclick="maskInputFields();" />
       Mask/hide input (so that no one can see your salary ;)<br><br>
@@ -65,41 +70,48 @@
 
     <br><hr>
     <h3>Results (see console log in browser for calculation details)</h3>
+    <div><i>For simplicity, calculating contributions and interests once a year instead of month by month.</i></div><br>
     <div id="result"></div>
 
     <script>
       let config = {
-          "version": "2016-01-01", // info as per date in version
+          "version": "2022-01-01", // info as per date in version
 
-          "ordinaryWageCeiling": 6000, // CPF contributions computed based on this amount only, even if salary is higher
+          // CPF contributions computed based on this amount only, even if salary is higher
+          // For simplicity, does not factor in Additional Wage Ceiling
+          "ordinaryWageCeiling": 6000,
 
+          // From https://www.cpf.gov.sg/member/faq/healthcare-financing/basic-healthcare-sum/what-is-the-basic-healthcare-sum
           "basicHealthcareSum": {
-            "year": 2020, // the year the amount is based on
-            "amount": 60000 // any contributions to Medisave beyond this amount are channeled to Special/Retirement Acc
+            "year": 2022, // the year the amount is based on
+            "amount": 66000 // any contributions to Medisave beyond this amount are channeled to Special/Retirement Acc
           },
 
+          // From https://www.cpf.gov.sg/member/faq/retirement-income/general-information-on-retirement/how-much-retirement-sum-do-i-need-
           "retirementScheme": {
-            "year": 2020, // the year the retirement sums are based on - will be inflated in subsequent years
+            "year": 2022, // the year the retirement sums are based on - will be inflated in subsequent years
             "retirementAccountAge": 55,  // age when Ordinary Account & Special Account are combined into Retirement Acc
             "payoutAge": 65, // age when payouts start
             "inflationRate": 5, // inflation rate for estimating sums. Rates are in %, i.e. a value of 5 means 5%.
+            // Using CPF Life Estimator at https://www.cpf.gov.sg/eSvc/Web/Schemes/LifeEstimator/GetLifeEstimatorResults
+            // to simulate a person at the age of 55 with the 3 sums and on the Standard Plan
             "sums": {
               "basic": {
-                  "amount": 90500,
+                  "amount": 96000,
                   "payouts": {
-                    "standard": 790 // upper limit
+                    "standard": 830
                   }
               },
               "full": {
-                  "amount": 181000, // full = 2 x basic
+                  "amount": 192000, // full = 2 x basic
                   "payouts": {
-                    "standard": 1450
+                    "standard": 1550
                   }
               },
               "enhanced": { // enhanced = 3 x basic
-                  "amount": 271500,
+                  "amount": 288000,
                   "payouts": {
-                    "standard": 2110
+                    "standard": 2280
                   }
               }
             }
@@ -112,14 +124,16 @@
             "retirement": 4
           },
 
-          "additionalInterest": { // additional 1% interest for 1st $60000 (OA + SA), capped at $20000 for OA
+          // From https://www.cpf.gov.sg/member/infohub/news/news-releases/cpf-interest-rates-from-1-january-2022-to-31-march-2022-and-basic-healthcare-sum-for-2022
+          "additionalInterest": {
+            // Below age 55, additional 1% interest for 1st $60000 (OA + SA), capped at $20000 for OA
             "rate": 1,
             "totalCap": 60000,
             "ordinaryCap": 20000
           },
 
           "additionalRetirementInterest": {
-            // From Jan 2016, those aged 55 and above will earn an additional 1% interest (on top of the usual)
+            // Aged 55 and above, additional 1% interest (on top of additionalInterest)
             // for 1st $30000 (OA + SA), capped at $20000 for OA
             "age": 55,
             "rate": 1,
@@ -128,72 +142,87 @@
           },
 
           /**
+           * From https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFContributionRatesTable_1Jan2022.pdf
+           *
+           * For simplicity, use contribution rates for citizen where employee's total monthly wages > $750
+           *
            * <age> => [
            *     'employee' => <employee contribution rate - % of wage>,
            *     'employer' => <employer contribution rate - % of wage>,
            * ]
            */
           "contributionRatesByAge": {
-            "55": { // 55 and below
+            "55": { // 55 & below
               "employee": 20,
               "employer": 17
             },
             "60": { // above 55 to 60
-              "employee": 13,
-              "employer": 13
+              "employee": 14,
+              "employer": 14
             },
             "65": { // above 60 to 65
-              "employee": 9,
-              "employer": 7.5
+              "employee": 8.5,
+              "employer": 10
             },
-            "1000": { // above 65
-              "employee": 7.5,
-              "employer": 5
+            "70": { // above 65 to 70
+              "employee": 6,
+              "employer": 8
+            },
+            "1000": { // above 70
+              "employee": 5,
+              "employer": 7.5
             }
           },
 
           /**
+           * From https://www.cpf.gov.sg/content/dam/web/member/faq/growing-your-savings/documents/CPF_Allocation_Rates_from_1_January_2022.pdf
+           *
            * <age> => [
-           *    'ordinary' => <Ordinary Account allocation rate - % of wage>,
-           *    'special' => <Special Acccount allocation rate - % of wage>,
-           *    'medisave' => <Medisave Account allocation rate - % of wage>,
+           *    'ordinary' => <Ordinary Account allocation rate - % of contribution amount>,
+           *    'special' => <Special Acccount allocation rate - % of contribution amount>,
+           *    'medisave' => <Medisave Account allocation rate - % of contribution amount>,
            * ]
            */
           "allocationRatesByAge": {
             "35": { // 35 and below
-              "ordinary": 23,
-              "special": 6,
-              "medisave": 8
+              "ordinary": 62.17,
+              "special": 16.21,
+              "medisave": 21.62
             },
             "45": { // above 35 to 45
-              "ordinary": 21,
-              "special": 7,
-              "medisave": 9
+              "ordinary": 56.77,
+              "special": 18.91,
+              "medisave": 24.32
             },
             "50": { // above 45 to 50
-              "ordinary": 19,
-              "special": 8,
-              "medisave": 10
+              "ordinary": 51.36,
+              "special": 21.62,
+              "medisave": 27.02
             },
             "55": { // above 50 to 55
-              "ordinary": 15,
-              "special": 11.5,
-              "medisave": 10.5
+              "ordinary": 40.55,
+              "special": 31.08,
+              "medisave": 28.37
             },
             "60": { // above 55 to 60
-              "ordinary": 12,
-              "special": 3.5,
-              "medisave": 10.5
+              "ordinary": 42.86,
+              "special": 19.64,
+              "medisave": 37.5
             },
             "65": { // above 60 to 65
-              "ordinary": 3.5,
-              "special": 2.5,
-              "medisave": 10.5
+              "ordinary": 18.93,
+              "special": 24.32,
+              "medisave": 56.75
             },
-            "1000": { // above 65
-              "ordinary": 0.75,
-              "special": 0.75,
-              "medisave": 7.875
+            "70": { // above 65 to 70
+              "ordinary": 7.15,
+              "special": 17.85,
+              "medisave": 75
+            },
+            "1000": { // above 50
+              "ordinary": 8,
+              "special": 8,
+              "medisave": 84
             }
           }
         };
@@ -289,7 +318,7 @@
 
           for (let year = 1; year <= (config['retirementScheme']['payoutAge'] - input['age']); year++) {
               let currentAge = input['age'] + year;
-              console.log(sprintf('[Year %s, age %s]', year, currentAge));
+              console.log(sprintf('[End of Year %s, age %s]', year, currentAge));
 
               // Get contribution rate for current age
               let contributionRate = [];
@@ -434,10 +463,15 @@
               }
 
               // At retirementAccountAge, ordinary and special accounts are combined
-              retirementStr = (retirementAccountAge > currentAge) ? '' : sprintf(
-                  ' (Retirement Acc = Ordinary Acc + Special Acc = %s)',
-                  result['ordinary'] + result['special']
-              );
+              retirementStr = (retirementAccountAge > currentAge)
+                  ? sprintf(
+                      ' (OA + SA = %s)', // no retirement account yet, but show for easy reference
+                      result['ordinary'] + result['special']
+                  )
+                  : sprintf(
+                      ' (Retirement Acc = Ordinary Acc + Special Acc = %s)',
+                      result['ordinary'] + result['special']
+                  );
               console.log(sprintf(
                   '%sRetirement Acc = Ordinary Acc + Special Acc = $%s',
                   indent4,
