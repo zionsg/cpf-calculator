@@ -2,7 +2,6 @@
 <html>
   <!--
   /**
-   * @todo To calculate contribution/interest monthly instead of yearly
    * @todo To factor in bonus and additional wage ceiling
    * @link https://github.com/zionsg/cpf-calculator/
    * @version 2022-01-15T13:15+08:00
@@ -219,7 +218,7 @@
               "special": 17.85,
               "medisave": 75
             },
-            "1000": { // above 50
+            "1000": { // above 70
               "ordinary": 8,
               "special": 8,
               "medisave": 84
@@ -233,9 +232,9 @@
        * Simple string replacement function
        *
        * @example sprintf('<img src="%s" class="%s" />', 'a.png', 'beta') => <img src="a.png" class="beta" />
-       * @param   string format    Use "%s" as placeholder
-       * @param   ...    arguments Add as many arguments as there are %s after the format
-       * @return  string
+       * @param {string} format - Use "%s" as placeholder.
+       * @param {...mixed} arguments - Add as many arguments as there are %s after the format.
+       * @returns {string}
        */
       function sprintf(format) {
           for (let i = 1; i < arguments.length; i++) {
@@ -248,7 +247,7 @@
       /**
        * Mask/unmask input fields - only number fields will be affected
        *
-       * @return void
+       * @returns {void}
        */
       function maskInputFields() {
           let mask = document.getElementById('maskInput').checked;
@@ -264,7 +263,7 @@
       /**
        * Get input from form
        *
-       * @return object
+       * @returns {object}
        */
       function getInput() {
           return {
@@ -293,9 +292,9 @@
       /**
        * Compute CPF contributions
        *
-       * @param object config CPF config
-       * @param object input Form input
-       * @return void
+       * @param {object} config - CPF config
+       * @param {object} input - Form input
+       * @returns {void}
        */
       function compute(config, input) {
           let output = '';
@@ -312,6 +311,7 @@
 
           console.clear();
           console.log('Input: ' + JSON.stringify(input));
+
           if (!input['maskInput']) {
               output = JSON.stringify(input) + '<br><br>';
           }
