@@ -4,7 +4,7 @@
   /**
    * @todo To factor in bonus and additional wage ceiling
    * @link https://github.com/zionsg/cpf-calculator/
-   * @version 2022-01-15T13:15+08:00
+   * @version 2024-12-17T17:00+08:00
    */
   -->
   <head>
@@ -74,22 +74,22 @@
 
     <script>
       let config = {
-          "version": "2023-09-01", // info as per date in version
+          "version": "2025-01-01", // CPF info as of this date
 
           // CPF contributions computed based on this amount only, even if salary is higher
           // For simplicity, does not factor in Additional Wage Ceiling
           // From https://www.cpf.gov.sg/employer/infohub/news/cpf-related-announcements/new-contribution-rates
-          "ordinaryWageCeiling": 6300,
+          "ordinaryWageCeiling": 7400,
 
           // From https://www.cpf.gov.sg/member/faq/healthcare-financing/basic-healthcare-sum/what-is-the-basic-healthcare-sum
           "basicHealthcareSum": {
-            "year": 2023, // the year the amount is based on
-            "amount": 68500 // any contributions to Medisave beyond this amount are channeled to Special/Retirement Acc
+            "year": 2025, // the year the amount is based on
+            "amount": 75500 // any contributions to Medisave beyond this amount are channeled to Special/Retirement Acc
           },
 
           // From https://www.cpf.gov.sg/member/faq/retirement-income/general-information-on-retirement/how-much-retirement-sum-do-i-need-
           "retirementScheme": {
-            "year": 2023, // the year the retirement sums are based on - will be inflated in subsequent years
+            "year": 2025, // the year the retirement sums are based on - will be inflated in subsequent years
             "retirementAccountAge": 55,  // age when Ordinary Account & Special Account are combined into Retirement Acc
             "payoutAge": 65, // age when payouts start
             "inflationRate": 5, // inflation rate for estimating sums. Rates are in %, i.e. a value of 5 means 5%.
@@ -97,21 +97,21 @@
             // to simulate a person at the age of 55 with the 3 sums and on the Standard Plan
             "sums": {
               "basic": {
-                  "amount": 99400,
+                  "amount": 106500,
                   "payouts": {
-                    "standard": 850
+                    "standard": 930
                   }
               },
               "full": {
-                  "amount": 198000, // full = 2 x basic
+                  "amount": 213000, // full = 2 x basic
                   "payouts": {
-                    "standard": 1600
+                    "standard": 1670
                   }
               },
-              "enhanced": { // enhanced = 3 x basic
-                  "amount": 298200,
+              "enhanced": { // enhanced = 4 x basic
+                  "amount": 426000,
                   "payouts": {
-                    "standard": 2360
+                    "standard": 3330
                   }
               }
             }
@@ -142,7 +142,7 @@
           },
 
           /**
-           * From https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPF%20contribution%20rates%20from%201%20Sep%202023.pdf
+           * From https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPF_contribution_rates_from_1_Jan_2025.pdf
            *
            * For simplicity, use contribution rates for citizen where employee's total monthly wages > $750
            *
@@ -157,16 +157,16 @@
               "employee": 20,
             },
             "60": { // above 55 to 60
-              "employer": 14.5,
-              "employee": 15,
+              "employer": 15.5,
+              "employee": 17,
             },
             "65": { // above 60 to 65
-              "employer": 11,
-              "employee": 9.5,
+              "employer": 12,
+              "employee": 11.5,
             },
             "70": { // above 65 to 70
-              "employer": 8.5,
-              "employee": 7,
+              "employer": 9,
+              "employee": 7.5,
             },
             "1000": { // above 70
               "employer": 7.5,
@@ -175,7 +175,7 @@
           },
 
           /**
-           * From https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPF%20allocation%20rates%20from%201%20January%202023.pdf
+           * From https://www.cpf.gov.sg/service/article/what-are-the-cpf-allocation-rates-for-2025
            *
            * <age> => [
            *    'ordinary' => <Ordinary Account allocation rate - % of contribution amount>,
@@ -205,19 +205,19 @@
               "medisave": 28.37
             },
             "60": { // above 55 to 60
-              "ordinary": 40.69,
-              "special": 23.72,
-              "medisave": 35.59
+              "ordinary": 36.94,
+              "special": 30.76,
+              "medisave": 32.30
             },
             "65": { // above 60 to 65
-              "ordinary": 17.09,
-              "special": 31.70,
-              "medisave": 51.21
+              "ordinary": 14.9,
+              "special": 40.42,
+              "medisave": 44.68
             },
             "70": { // above 65 to 70
-              "ordinary": 6.46,
-              "special": 25.80,
-              "medisave": 67.74
+              "ordinary": 6.07,
+              "special": 30.3,
+              "medisave": 63.63
             },
             "1000": { // above 70
               "ordinary": 8,
