@@ -4,7 +4,7 @@
   /**
    * @todo To factor in bonus and additional wage ceiling
    * @link https://github.com/zionsg/cpf-calculator/
-   * @version 2025-07-21T13:30+08:00
+   * @version 2025-07-21T16:30+08:00
    */
   -->
   <head>
@@ -19,6 +19,10 @@
       input {
         font-family: monospace;
         font-size: 16px;
+      }
+
+      input {
+        margin-bottom: 0.5rem;
       }
 
       a { color: blue; }
@@ -40,7 +44,9 @@
 
       Inflation rate per year: <input id="inflationRate" type="number" value="5" /> %<br><br>
 
-      Monthly salary: <input id="monthlySalary" type="number" /> (contributions capped at Ordinary Wage Ceiling)<br>
+      Current Monthly salary: <input id="monthlySalary" type="number" />
+      (contributions capped at Ordinary Wage Ceiling)<br>
+      Retirement monthly salary (age 55 onwards): <input id="retirementMonthlySalary" type="number" /><br>
       <input id="includeEmployeeContribution" type="checkbox" checked /> Include employee contribution<br>
       <input id="includeEmployerContribution" type="checkbox" checked /> Include employer contribution<br>
       <br>
@@ -279,9 +285,10 @@
                 maskInput: document.getElementById('maskInput').checked,
                 age: parseInt(document.getElementById('age').value) || 0,
                 inflationRate: parseFloat(
-                    document.getElementById('inflationRate').value || config['retirementScheme']['inflationRate']
+                    document.getElementById('inflationRate').value || config.retirementScheme.inflationRate
                 ) || 0,
                 monthlySalary: parseInt(document.getElementById('monthlySalary').value) || 0,
+                retirementMonthlySalary: parseInt(document.getElementById('retirementMonthlySalary').value) || 0,
                 includeEmployeeContribution: document.getElementById('includeEmployeeContribution').checked,
                 includeEmployerContribution: document.getElementById('includeEmployerContribution').checked,
                 sumsByAccount: {
@@ -314,6 +321,7 @@
             let retirementAccountAge = config.retirementScheme.retirementAccountAge;
             let inflationRate = input.inflationRate;
             let result = {
+                salary: input.monthlySalary,
                 ordinary: input.sumsByAccount.ordinary,
                 special:  input.sumsByAccount.special,
                 medisave: input.sumsByAccount.medisave,
@@ -347,6 +355,10 @@
             for (let year = 1; year <= (config.retirementScheme.payoutAge - input.age); year++) {
                 let currentAge = input.age + year;
                 console.log(sprintf('[End of Year %s, age %s]', year, currentAge));
+
+                result.salary =  (currentAge < config.retirementScheme.retirementAccountAge)
+                    ? input.monthlySalary
+                    : input.retirementMonthlySalary;
 
                 // Upon retirement account age, up to Full Retirement Sum is moved from Special Account to
                 // Retirement Account, remainder goes into Ordinary Account, Special Account is closed
@@ -396,15 +408,15 @@
                 console.log(sprintf('%sAllocation rates: %s', indent4, JSON.stringify(allocationRate)));
 
                 // Compute contribution amount
-                let totalContributionRate = (input.includeEmployeeContribution ? contributionRate['employee'] : 0)
+                let totalContributionRate = (input.includeEmployeeContribution ? contributionRate.employee : 0)
                     + (input.includeEmployerContribution ? contributionRate.employer : 0);
                 let contributionAmount = monthsInYear * (totalContributionRate / 100)
-                    * Math.min(config['ordinaryWageCeiling'], input['monthlySalary']);
+                    * Math.min(config.ordinaryWageCeiling, result.salary);
                 console.log(sprintf(
                     '%sContribution based on $%s from monthly salary of $%s (capped at Ordinary Wage Ceiling of $%s)',
                     indent4,
-                    Math.min(config['ordinaryWageCeiling'], input.monthlySalary),
-                    input.monthlySalary,
+                    Math.min(config.ordinaryWageCeiling, result.salary),
+                    result.salary,
                     config.ordinaryWageCeiling
                 ));
                 console.log(sprintf(
@@ -417,9 +429,9 @@
                 console.log(sprintf('%sContribution amount: $%s', indent4, Math.round(contributionAmount)));
 
                 // Compute amounts allocated to each account
-                let totalAllocationRate =
-                    allocationRate.ordinary + allocationRate.special + allocationRate.medisave;
-                let additionalInterest = config['additionalInterest']['rate'];
+                let totalAllocationRate = allocationRate.ordinary
+                    + allocationRate.special + allocationRate.medisave + allocationRate.retirement;
+                let additionalInterest = config.additionalInterest.rate;
                 let additionalInterestAppliedTotal = 0;
                 ['ordinary', 'special', 'medisave', 'retirement'].forEach(function (account) {
                     console.log(sprintf('%s%s account', indent4, account));
